@@ -39,7 +39,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
     ],
-    author='',
+    author='Kurt',
     author_email='',
     url='',
     keywords='web pyramid pylons',
