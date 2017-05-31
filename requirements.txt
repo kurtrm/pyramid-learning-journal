@@ -6,7 +6,6 @@ ipython==6.0.0
 ipython-genutils==0.2.0
 jedi==0.10.2
 Jinja2==2.9.6
--e git+https://github.com/kurtrm/pyramid-learning-journal.git@5bcb5a47c939f805a7ccf1ed931806085f13b009#egg=learning_journal&subdirectory=..
 Mako==1.0.6
 MarkupSafe==1.0
 PasteDeploy==1.5.2
