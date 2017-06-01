@@ -1,6 +1,7 @@
 from pyramid.view import view_config
 from learning_journal.data.entries import ENTRIES
 from pyramid.httpexceptions import HTTPNotFound
+from learning_journal.models.entries import Entry
 
 
 @view_config(
@@ -9,9 +10,10 @@ from pyramid.httpexceptions import HTTPNotFound
 )
 def list_view(request):
     """List of journal entries."""
+    entries = request.dbsession.query(Entry).all()
     return {
         'title': 'Main',
-        'entries': ENTRIES
+        'entries': entries
     }
 
 
@@ -22,15 +24,16 @@ def list_view(request):
 def detail_view(request):
     """Single journal entry."""
     entry_id = int(request.matchdict['id'])
-    try:
-        entry = ENTRIES[entry_id]
-    except IndexError:
+    entry = request.dbsession.query(Entry).get(entry_id)
+    if entry:
+        return {
+            'id': entry.id,
+            'title': entry.title,
+            'body': entry.body,
+            'creation_date': entry.creation_date
+        }
+    else:
         raise HTTPNotFound
-    return {
-        'title': 'Detail',
-        'entries': entry
-    }
-
 
 @view_config(
     route_name="create_view",
