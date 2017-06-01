@@ -1,35 +1,50 @@
-from pyramid.response import Response
-import os
-import io
+from pyramid.view import view_config
+from learning_journal.data.entries import ENTRIES
+from pyramid.httpexceptions import HTTPNotFound
 
 
-HERE = os.path.dirname(__file__)
-
-
+@view_config(
+    route_name="list_view",
+    renderer='../templates/index.jinja2'
+)
 def list_view(request):
     """List of journal entries."""
-    with io.open(os.path.join(HERE, '../scripts/index.html')) as file:
-        imported_html = file.read()
-    #import pdb; pdb.set_trace()
-    return Response(imported_html)
+    return {
+        'title': 'Main',
+        'entries': ENTRIES
+    }
 
 
+@view_config(
+    route_name="detail_view",
+    renderer='../templates/detail.jinja2'
+)
 def detail_view(request):
     """Single journal entry."""
-    with io.open(os.path.join(HERE, '../scripts/detail.html')) as file:
-        imported_html = file.read()
-    return Response(imported_html)
+    entry_id = int(request.matchdict['id'])
+    try:
+        entry = ENTRIES[entry_id]
+    except IndexError:
+        raise HTTPNotFound
+    return {
+        'title': 'Detail',
+        'entries': entry
+    }
 
 
+@view_config(
+    route_name="create_view",
+    renderer='../templates/new_entry.jinja2'
+)
 def create_view(request):
     """Create new view."""
-    with io.open(os.path.join(HERE, '../scripts/new_entry.html')) as file:
-        imported_html = file.read()
-    return Response(imported_html)
+    return {}
 
 
-def update_view(request):
-    """Update existing view."""
-    with io.open(os.path.join(HERE, '../scripts/edit.html')) as file:
-        imported_html = file.read()
-    return Response(imported_html)
+# @view_config(
+#     route_name="update_view",
+#     renderer='../templates/edit.jinja2'
+# )
+# def update_view(request):
+#     """Update existing view."""
+#     return {}
