@@ -1,42 +1,154 @@
 from pyramid import testing
-from pyramid.response import Response
 import pytest
-import os
-import io
+import transaction
+from learning_journal.models import (
+    Entry,
+    get_tm_session,
+)
+from learning_journal.models.meta import Base
 
-HERE = os.path.dirname(__file__)
+SITE_ROOT = 'http://localhost'
+
+
+@pytest.fixture(scope='session')
+def configuration(request):
+    config = testing.setUp(settings={
+        'sqlalchemy.url': 'postgres://kurtrm:hofbrau@localhost:5432/learning_journal'
+    })
+    config.include("learning_journal.models")
+    config.include("learning_journal.routes")
+
+    def teardown():
+        testing.tearDown()
+
+    request.addfinalizer(teardown)
+    return config
 
 
 @pytest.fixture
-def httprequest():
+def db_session(configuration, request):
+    SessionFactory = configuration.registry["dbsession_factory"]
+    session = SessionFactory()
+    engine = session.bind
+    Base.metadata.create_all(engine)
+
+    def teardown():
+        session.transaction.rollback()
+        Base.metadata.drop_all(engine)
+
+    request.addfinalizer(teardown)
+    return session
+
+
+@pytest.fixture
+def dummy_request(db_session):
+    from pyramid import testing
     req = testing.DummyRequest()
+    req.dbsession = db_session
     return req
 
 
-def test_html_views_return_response(httprequest):
-    """Home view returns a reponse object."""
-    from learning_journal.views.default import (
-        list_view,
-        detail_view,
-        create_view,
-        update_view
-    )
-    assert isinstance(list_view(httprequest), Response)
-    assert isinstance(detail_view(httprequest), Response)
-    assert isinstance(create_view(httprequest), Response)
-    assert isinstance(update_view(httprequest), Response)
+@pytest.fixture
+def post_request(dummy_request):
+    dummy_request.method = 'POST'
+    return dummy_request
 
 
-def test_list_view_return_proper_content(httprequest):
-    """Home view has file content."""
-    from learning_journal.views.default import list_view
-    file_content = io.open(os.path.join(HERE, 'scripts/index.html')).read()
-    response = list_view(httprequest)
-    assert file_content == response.text
+def test_create_view_post_empty_dict(post_request):
+    """Create view returns a reponse object."""
+    from learning_journal.views.default import new_entry
+    response = new_entry(post_request)
+    assert response == {}
 
 
-def test_list_view_is_good():
-    """Home view response has file content."""
-    from learning_journal.views.default import list_view
-    response = list_view(httprequest)
-    assert response.status_code == 200
+def test_create_view_post_returns_error(post_request):
+    """Create view returns error."""
+    from learning_journal.views.default import new_entry
+    data = {
+        'title': '',
+        'price': ''
+    }
+    post_request.POST = data
+    response = new_entry(post_request)
+    assert 'error' in response
+
+
+def test_create_view_post_incomplete_ok(post_request):
+    """New entry will take empty fields and be fine."""
+    from learning_journal.views.default import new_entry
+    data = {
+        'title': 'Testing 1-2-3-',
+        'body': ''
+    }
+    post_request.POST = data
+    response = new_entry(post_request)
+    assert 'title' in response
+    assert 'body' in response
+    assert response['title'] == 'Testing 1-2-3'
+    assert response['body'] == ''
+
+
+def test_create_view_redirects_after_post(post_request):
+    """Ensure it puts us back on the homepage when done."""
+    from learning_journal.views.default import new_entry
+    from pyramid.httpexceptions import HTTPFound
+    data = {
+        'title': 'Testing 1-2-3',
+        'body': 'This is a test of the database.',
+        'creation_date': 'n/a'
+    }
+    post_request.POST = data
+    response = new_entry(post_request)
+    assert response.status_code == 302
+    assert isinstance(response, HTTPFound)
+
+
+#  ====== Functional Tests ======
+
+@pytest.fixture(scope='session')
+def testapp(request):
+    from webtest import TestApp
+    from pyramid.config import Configurator
+
+    def main(global_config, **settings):
+        settings['sqlalchemy.url'] = 'postgres://kurtrm:hofbrau@localhost:5432/learning_journal'
+        config = Configurator(settings=settings)
+        config.include('pyramid_jinja2')
+        config.include('.models')
+        config.include('.routes')
+        config.scan()
+        return config.make_wsgi_app()
+
+    app = main({})
+    testapp = TestApp(app)
+
+    SessionFactory = app.registry['dbsession_factory']
+    engine = SessionFactory().bind
+    Base.metadata.create_all(bind=engine)
+
+    def tearDown():
+        Base.metadata.drop_all(bind=engine)
+
+    request.addfinalizer(tearDown)
+
+    return testapp
+
+
+def test_new_entry_redirects_to_home(testapp):
+    data = {
+        'title': 'Testing 1-2-3',
+        'body': 'This is a test of the database.',
+        'creation_date': ''
+    }
+    response = testapp.post('/journal/new-entry', data)
+    assert response.location == SITE_ROOT + '/'
+
+
+def test_new_entry_redirects_and_shows_html(testapp):
+    data = {
+        'title': 'Testing 1-2-3',
+        'body': 'This is a test of the database.',
+        'creation_date': ''
+    }
+    response = testapp.post('/journal/new-entry', data).follow()
+    assert "<h1>List of Entries</h1>" in response.text
