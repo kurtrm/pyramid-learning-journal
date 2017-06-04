@@ -1,65 +1,46 @@
-import unittest
-import transaction
-
+"""Test our learning journal application."""
 from pyramid import testing
+from pyramid.response import Response
+import pytest
 
 
-def dummy_request(dbsession):
-    return testing.DummyRequest(dbsession=dbsession)
+@pytest.fixture
+def request():
+    """Request object for testing."""
+    request = testing.DummyRequest()
+    return request
 
 
-class BaseTest(unittest.TestCase):
-    def setUp(self):
-        self.config = testing.setUp(settings={
-            'sqlalchemy.url': 'sqlite:///:memory:'
-        })
-        self.config.include('.models')
-        settings = self.config.get_settings()
-
-        from .models import (
-            get_engine,
-            get_session_factory,
-            get_tm_session,
-            )
-
-        self.engine = get_engine(settings)
-        session_factory = get_session_factory(self.engine)
-
-        self.session = get_tm_session(session_factory, transaction.manager)
-
-    def init_database(self):
-        from .models.meta import Base
-        Base.metadata.create_all(self.engine)
-
-    def tearDown(self):
-        from .models.meta import Base
-
-        testing.tearDown()
-        transaction.abort()
-        Base.metadata.drop_all(self.engine)
+def test_list_view_returns_response(request):
+    """Ensure list_view returns a Response object."""
+    from learning_journal.views.default import list_view
+    response = list_view(request)
+    assert isinstance(response, Response)
 
 
-class TestMyViewSuccessCondition(BaseTest):
-
-    def setUp(self):
-        super(TestMyViewSuccessCondition, self).setUp()
-        self.init_database()
-
-        from .models import MyModel
-
-        model = MyModel(name='one', value=55)
-        self.session.add(model)
-
-    def test_passing_view(self):
-        from .views.default import my_view
-        info = my_view(dummy_request(self.session))
-        self.assertEqual(info['one'].name, 'one')
-        self.assertEqual(info['project'], 'learning journal')
+def test_list_view_checks_out(request):
+    """Ensure list view returns a 200 OK response."""
+    from learning_journal.views.default import list_view
+    response = list_view(request)
+    assert response.status_code == 200
 
 
-class TestMyViewFailureCondition(BaseTest):
+def test_list_view_returns_content(request):
+    """Ensure response has proper content."""
+    from learning_journal.views.default import list_view
+    response = list_view(request)
+    assert 'The Bootstrap Blog' in response.text
 
-    def test_failing_view(self):
-        from .views.default import my_view
-        info = my_view(dummy_request(self.session))
-        self.assertEqual(info.status_int, 500)
+
+def test_detail_view_returns_ok(request):
+    """Ensure response from detail view has 200 OK."""
+    from learning_journal.views.default import detail_view
+    response = detail_view(request)
+    assert response.status_code == 200
+
+
+def test_detail_view_has_a_link_home(request):
+    """Ain't much content on this page, it only has a link home."""
+    from learning_journal.views.default import detail_view
+    response = detail_view(request)
+    assert '<button><a href="/">Home</a></button>' in response.text
