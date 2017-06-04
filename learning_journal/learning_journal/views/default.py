@@ -36,7 +36,7 @@ def detail_view(request):
     route_name="create_view",
     renderer='../templates/new_entry.jinja2'
 )
-def create_view(request):
+def create_view(request):  # pragma no cover
     """Create new view."""
     return {}
 
