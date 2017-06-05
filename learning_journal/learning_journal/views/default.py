@@ -49,6 +49,7 @@ def create_view(request):
                 'body': request.POST['body'],
                 'error': 'Please provide a title and/or body.'
             }
+        # import pdb; pdb.set_trace()
         new_entry = Entry(
             title=request.POST['title'],
             body=request.POST['body'],
