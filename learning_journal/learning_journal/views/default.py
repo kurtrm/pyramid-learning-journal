@@ -58,6 +58,7 @@ def create_view(request):
         return HTTPFound(
             location=request.route_url('list_view')
         )
+    return {}
 
 
 @view_config(
@@ -81,4 +82,4 @@ def update_view(request):
         entry.title = request.POST['title']
         entry.body = request.POST['body']
         request.dbsession.flush()
-        return HTTPFound(request.route_url('detail', id=entry.id))
+        return HTTPFound(request.route_url('detail_view', id=entry.id))

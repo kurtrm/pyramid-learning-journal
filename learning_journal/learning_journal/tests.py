@@ -13,7 +13,7 @@ SITE_ROOT = 'http://localhost'
 @pytest.fixture(scope='session')
 def configuration(request):
     config = testing.setUp(settings={
-        'sqlalchemy.url': 'postgres://kurtrm:hofbrau@localhost:5432/learning_journal'
+        'sqlalchemy.url': 'postgres://kurtrm:hofbrau@localhost:5432/test_journal'
     })
     config.include("learning_journal.models")
     config.include("learning_journal.routes")
@@ -77,7 +77,7 @@ def test_create_view_post_incomplete_ok(post_request):
     """New entry will take empty fields and be fine."""
     from learning_journal.views.default import new_entry
     data = {
-        'title': 'Testing 1-2-3-',
+        'title': 'Testing 1-2-3',
         'body': ''
     }
     post_request.POST = data
@@ -95,7 +95,7 @@ def test_create_view_redirects_after_post(post_request):
     data = {
         'title': 'Testing 1-2-3',
         'body': 'This is a test of the database.',
-        'creation_date': 'n/a'
+        'creation_date': ''
     }
     post_request.POST = data
     response = new_entry(post_request)
@@ -151,4 +151,4 @@ def test_new_entry_redirects_and_shows_html(testapp):
         'creation_date': ''
     }
     response = testapp.post('/journal/new-entry', data).follow()
-    assert "<h1>List of Entries</h1>" in response.text
+    assert "<h1>Testing 1-2-3</h1>" in response.text
