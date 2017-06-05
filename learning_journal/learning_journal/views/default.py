@@ -50,6 +50,7 @@ def create_view(request):
                 'body': request.POST['body'],
                 'error': 'Please provide a title and/or body.'
             }
+        # import pdb; pdb.set_trace()
         new_entry = Entry(
             title=request.POST['title'],
             body=request.POST['body'],
@@ -59,6 +60,7 @@ def create_view(request):
         return HTTPFound(
             location=request.route_url('list_view')
         )
+    return {}
 
 
 @view_config(
@@ -82,4 +84,4 @@ def update_view(request):
         entry.title = request.POST['title']
         entry.body = request.POST['body']
         request.dbsession.flush()
-        return HTTPFound(request.route_url('detail', id=entry.id))
+        return HTTPFound(request.route_url('detail_view', id=entry.id))
