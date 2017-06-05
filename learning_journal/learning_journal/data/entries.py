@@ -1,5 +1,4 @@
-"""All journal entries."""
-
+"""All entries in a dictionary."""
 ENTRIES = [
     {
         "id": 0,
@@ -52,7 +51,6 @@ As far as the data structures assignment goes, I had a hard time grasping linked
         "title": "May 24, 2017",
         "creation_date": "May 24, 2017",
         "body": '''With the constant exposure to http headers, I've started to retain more information about them. The format of the headers, particularly. I tried to wrap my head around when to use class methods, but Patrick and Nick helped me get to a point that I think I understand them.
-
 Anna and I have caught up on our data structures. Removing a a few methods and adding a dash of logic and new attributes, I think we'll have our double linked list tomorrow.'''
     },
     {

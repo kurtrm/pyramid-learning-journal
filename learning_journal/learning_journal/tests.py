@@ -1,79 +1,157 @@
 """Test our app."""
 from pyramid import testing
-from pyramid.httpexceptions import HTTPNotFound
-from learning_journal.data.entries import ENTRIES
 import pytest
-import os
+import transaction
+from learning_journal.models import (
+    Entry,
+    get_tm_session,
+)
+from learning_journal.models.meta import Base
 
-HERE = os.path.dirname(__file__)
-
-
-@pytest.fixture
-def home_response():
-    """Return a response from the home page."""
-    from learning_journal.views.default import list_view
-    req = testing.DummyRequest()
-    response = list_view(req)
-    return response
+SITE_ROOT = 'http://localhost'
 
 
-@pytest.fixture
-def detail_response():
-    """Return a single item from the ENTRIES dict for testing."""
-    from learning_journal.views.default import detail_view
-    req = testing.DummyRequest()
-    req.matchdict['id'] = '1'
-    response = detail_view(req)
-    return response
+@pytest.fixture(scope='session')
+def configuration(request):
+    config = testing.setUp(settings={
+        'sqlalchemy.url': 'postgres://kurtrm:hofbrau@localhost:5432/learning_journal'
+    })
+    config.include("learning_journal.models")
+    config.include("learning_journal.routes")
 
+    def teardown():
+        testing.tearDown()
 
-def test_home_view_returns_proper_content(home_response):
-    """Home view returns a reponse object."""
-    assert 'title' in home_response
-    assert 'entries' in home_response
-    assert home_response['entries'] == ENTRIES
-
-
-def test_detail_view_returns_one_response(detail_response):
-    """Test detail view has one entry on it."""
-    assert detail_response['entries'] == ENTRIES[1]
-
-
-def test_detail_view_returns_bad():
-    """Test that we get a 404 if id is bad."""
-    from learning_journal.views.default import detail_view
-    req = testing.DummyRequest()
-    req.matchdict['id'] = '70'
-    with pytest.raises(HTTPNotFound):
-        detail_view(req)
+    request.addfinalizer(teardown)
+    return config
 
 
 @pytest.fixture
-def testapp():
-    """Create a test application."""
-    from learning_journal import main
+def db_session(configuration, request):
+    SessionFactory = configuration.registry["dbsession_factory"]
+    session = SessionFactory()
+    engine = session.bind
+    Base.metadata.create_all(engine)
+
+    def teardown():
+        session.transaction.rollback()
+        Base.metadata.drop_all(engine)
+
+    request.addfinalizer(teardown)
+    return session
+
+
+@pytest.fixture
+def dummy_request(db_session):
+    from pyramid import testing
+    req = testing.DummyRequest()
+    req.dbsession = db_session
+    return req
+
+
+@pytest.fixture
+def post_request(dummy_request):
+    dummy_request.method = 'POST'
+    return dummy_request
+
+
+def test_create_view_post_empty_dict(post_request):
+    """Create view returns a reponse object."""
+    from learning_journal.views.default import new_entry
+    response = new_entry(post_request)
+    assert response == {}
+
+
+def test_create_view_post_returns_error(post_request):
+    """Create view returns error."""
+    from learning_journal.views.default import new_entry
+    data = {
+        'title': '',
+        'price': ''
+    }
+    post_request.POST = data
+    response = new_entry(post_request)
+    assert 'error' in response
+
+
+def test_create_view_post_incomplete_ok(post_request):
+    """New entry will take empty fields and be fine."""
+    from learning_journal.views.default import new_entry
+    data = {
+        'title': 'Testing 1-2-3-',
+        'body': ''
+    }
+    post_request.POST = data
+    response = new_entry(post_request)
+    assert 'title' in response
+    assert 'body' in response
+    assert response['title'] == 'Testing 1-2-3'
+    assert response['body'] == ''
+
+
+def test_create_view_redirects_after_post(post_request):
+    """Ensure it puts us back on the homepage when done."""
+    from learning_journal.views.default import new_entry
+    from pyramid.httpexceptions import HTTPFound
+    data = {
+        'title': 'Testing 1-2-3',
+        'body': 'This is a test of the database.',
+        'creation_date': 'n/a'
+    }
+    post_request.POST = data
+    response = new_entry(post_request)
+    assert response.status_code == 302
+    assert isinstance(response, HTTPFound)
+
+
+#  ====== Functional Tests ======
+
+@pytest.fixture(scope='session')
+def testapp(request):
     from webtest import TestApp
+    from pyramid.config import Configurator
+
+    def main(global_config, **settings):
+        settings['sqlalchemy.url'] = 'postgres://kurtrm:hofbrau@localhost:5432/learning_journal'
+        config = Configurator(settings=settings)
+        config.include('pyramid_jinja2')
+        config.include('.models')
+        config.include('.routes')
+        config.scan()
+        return config.make_wsgi_app()
+
     app = main({})
-    return TestApp(app)
+    testapp = TestApp(app)
+
+    SessionFactory = app.registry['dbsession_factory']
+    engine = SessionFactory().bind
+    Base.metadata.create_all(bind=engine)
+
+    def tearDown():
+        Base.metadata.drop_all(bind=engine)
+
+    request.addfinalizer(tearDown)
+
+    return testapp
 
 
-def test_home_route_returns_home_content(testapp):
-    """Test that we get the list_view content."""
-    response = testapp.get('/')
-    html = response.html
-    assert 'Kurt\'s Public Journal' in str(html.find('h1').text)
-    assert 'May 15, 2017' in str(html.find('h6').text)
+def test_new_entry_redirects_to_home(testapp):
+    data = {
+        'title': 'Testing 1-2-3',
+        'body': 'This is a test of the database.',
+        'creation_date': ''
+    }
+    response = testapp.post('/journal/new-entry', data)
+    assert response.location == SITE_ROOT + '/'
 
 
-def test_list_view_has_all_entries(testapp):
-    """Test that we get all the entries back."""
-    response = testapp.get('/')
-    html = response.html
-    assert len(ENTRIES) == len(html.find_all('h6'))
+def test_new_entry_redirects_and_shows_html(testapp):
+    data = {
+        'title': 'Testing 1-2-3',
+        'body': 'This is a test of the database.',
+        'creation_date': ''
+    }
+    response = testapp.post('/journal/new-entry', data).follow()
+    assert "<h1>List of Entries</h1>" in response.text
+find_all('h1')[1]
 
-
-def test_detail_route_has_the_correct_content(testapp):
-    """Ensure detail routes return the correct entry."""
-    response = testapp.get('/journal/3', status=200)
-    html = response.html
-    assert 'May 18, 2017' in html.find_all('h1')[1]

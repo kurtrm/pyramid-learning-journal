@@ -1,6 +1,6 @@
 [run]
 source = learning_journal
-omit =
+omit = 
     learning_journal/test*
     learning_journal/models/*
     learning_journal/scripts/*
