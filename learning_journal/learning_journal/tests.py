@@ -1,3 +1,4 @@
+"""Test our app."""
 from pyramid import testing
 import pytest
 import transaction
@@ -152,3 +153,5 @@ def test_new_entry_redirects_and_shows_html(testapp):
     }
     response = testapp.post('/journal/new-entry', data).follow()
     assert "<h1>List of Entries</h1>" in response.text
+find_all('h1')[1]
+
