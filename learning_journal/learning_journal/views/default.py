@@ -17,6 +17,7 @@ def list_view(request):
     }
 
 
+
 @view_config(
     route_name="detail_view",
     renderer='../templates/detail.jinja2'

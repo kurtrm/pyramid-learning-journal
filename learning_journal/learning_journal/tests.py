@@ -1,3 +1,4 @@
+"""Test our app."""
 from pyramid import testing
 import pytest
 import transaction
