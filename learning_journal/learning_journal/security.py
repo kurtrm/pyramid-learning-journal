@@ -4,6 +4,7 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.security import Allow
 from pyramid.security import Everyone, Authenticated
+from pyramid.session import SignedCookieSessionFactory
 import os
 
 
@@ -32,6 +33,10 @@ def includeme(config):
     config.set_authorization_policy(authz_policy)
     config.set_root_factory(MyRoot)
 
+    session_secret = os.evniron.get('SESSION_SECRET', "")
+    session_factory = SignedCookieSessionFactory(session_secret)
+    config.set_session_factory(session_factory)
+    config.set_default_csrf_options(require_csrf=True)
 
 def check_credentials(username, password):
     """Check user credentials."""

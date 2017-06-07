@@ -8,7 +8,7 @@ import datetime
 
 @view_config(
     route_name="list_view",
-    renderer='../templates/index.jinja2'
+    renderer='../templates/index.jinja2', require_csrf=False
 )
 def list_view(request):
     """List of journal entries."""
@@ -21,7 +21,7 @@ def list_view(request):
 
 @view_config(
     route_name="detail_view",
-    renderer='../templates/detail.jinja2'
+    renderer='../templates/detail.jinja2', require_csrf=False
 )
 def detail_view(request):
     """Single journal entry."""
@@ -105,6 +105,7 @@ def login(request):
         else:
             return {'error': 'Bad username or password.'}
     return {}
+
 
 @view_config(route_name='logout')
 def logout(request):

@@ -14,6 +14,7 @@
                 </textarea>
             </li>
             <li>
+            <input type="hidden" name="crf_token" value="{{ request.session.get_csrf_token() }}" />
             <input type="submit" value="Submit Entry" />
             </li>
         </ul>
