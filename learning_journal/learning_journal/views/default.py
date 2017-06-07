@@ -1,6 +1,8 @@
-from pyramid.view import view_config
-from pyramid.httpexceptions import HTTPNotFound, HTTPFound
 from learning_journal.models.entries import Entry
+from learning_journal.security import check_credentials
+from pyramid.httpexceptions import HTTPNotFound, HTTPFound
+from pyramid.security import remember, forget
+from pyramid.view import view_config
 import datetime
 
 
@@ -10,7 +12,7 @@ import datetime
 )
 def list_view(request):
     """List of journal entries."""
-    entries = request.dbsession.query(Entry).all()
+    entries = request.dbsession.query(Entry).all()[::-1]
     return {
         'title': 'Main',
         'entries': entries
@@ -38,7 +40,8 @@ def detail_view(request):
 
 @view_config(
     route_name="create_view",
-    renderer='../templates/new_entry.jinja2'
+    renderer='../templates/new_entry.jinja2',
+    permission='secret'
 )
 def create_view(request):
     """Create new entry."""
@@ -64,7 +67,8 @@ def create_view(request):
 
 @view_config(
     route_name="update_view",
-    renderer='../templates/edit.jinja2'
+    renderer='../templates/edit.jinja2',
+    permission='secret'
 )
 def update_view(request):
     """Update existing journal entry."""
@@ -84,3 +88,26 @@ def update_view(request):
         entry.body = request.POST['body']
         request.dbsession.flush()
         return HTTPFound(request.route_url('detail_view', id=entry.id))
+
+
+@view_config(
+    route_name='login',
+    renderer='../templates/login.jinja2',
+)
+def login(request):
+    """Log in the user based on their username and password."""
+    if request.method == 'POST':
+        username = request.params.get('username', '')
+        password = request.params.get('password', '')
+        if check_credentials(username, password):
+            headers = remember(request, username)
+            return HTTPFound(location=request.route_url('list_view'), headers=headers)
+        else:
+            return {'error': 'Bad username or password.'}
+    return {}
+
+@view_config(route_name='logout')
+def logout(request):
+    """Log out the user."""
+    headers = forget(request)
+    return HTTPFound(request.route_url('list_view'), headers=headers)
