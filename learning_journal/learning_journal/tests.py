@@ -195,4 +195,24 @@ def test_new_entry_redirects_and_shows_html(testapp):
 # ===== Recent tests June 8 =====
 
 
+# def test_unathenticated_user_is_forbidden_create_route(testapp):
+#     response = testapp.get('/journal/new-entry', status=403)
+#     assert response.status_code == 403
 
+
+# def test_unathenticated_user_is_forbidden_edit_route(testapp):
+#     response = testapp.get('/journal/1/edit-entry', status=403)
+#     assert response.status_code == 403
+
+
+# def test_can_get_login_route():
+#     response = testapp.get('/login')
+#     assert response.status_code == 200
+
+
+# def test_get_login_route_has_form_and_fields(testapp):
+#     response = testapp.get('/login')
+#     html = response.html
+#     assert html.find('form').attrs['method'] == 'POST'
+#     assert html.find('input', type='submit').attrs['value']== 'Login'
+#     assert html.find('input', )
