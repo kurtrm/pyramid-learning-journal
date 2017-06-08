@@ -119,7 +119,7 @@ def test_login_bad_credentials_fails(post_request):
     }
     post_request.POST = data
     response = login(post_request)
-    assert response = {'error': 'Bad username or password.'}
+    assert response == {'error': 'Bad username or password.'}
 
 
 def test_get_login_returns_dict(dummy_request):
