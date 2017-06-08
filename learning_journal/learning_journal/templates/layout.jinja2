@@ -40,7 +40,7 @@
           <a class="blog-nav-item" href="#">About</a>
           <a class="blog-nav-item" href="/journal/new-entry">New Entry</a>
           {% if request.authenticated_userid %}
-          <a class="blog-nav-item" href="/logout"><Logout</a>
+          <a class="blog-nav-item" href="/logout"><button>Logout</button></a>
           {% else %}
           <a href="/login"><button>Login</button></a>
           {% endif %}
