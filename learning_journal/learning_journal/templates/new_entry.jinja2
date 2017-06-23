@@ -10,10 +10,10 @@
             </li>
             <li>
                 <label for="body">Body: </label>
-                <textarea name="body">
-                </textarea>
+                <textarea name="body"></textarea>
             </li>
             <li>
+            <input type="hidden" name="csrf_token" value="{{ request.session.get_csrf_token() }}" />
             <input type="submit" value="Submit Entry" />
             </li>
         </ul>

@@ -16,6 +16,7 @@ def configuration(request):
     config = testing.setUp(settings={
         'sqlalchemy.url': 'postgres://kurtrm:hofbrau@localhost:5432/test_journal'
     })
+    config.include("learning_journal.security")
     config.include("learning_journal.models")
     config.include("learning_journal.routes")
 
@@ -53,6 +54,13 @@ def dummy_request(db_session):
 def post_request(dummy_request):
     dummy_request.method = 'POST'
     return dummy_request
+
+
+@pytest.fixture
+def set_credentials():
+    from learning_journal.security import pwd_context
+    import os
+    os.environ['AUTH_PASSWORD'] = pwd_context.hash('flamingo')
 
 
 def test_create_view_post_empty_dict(post_request):
@@ -101,6 +109,36 @@ def test_create_view_redirects_after_post(post_request):
     post_request.POST = data
     response = new_entry(post_request)
     assert response.status_code == 302
+    assert isinstance(response, HTTPFound)
+
+
+def test_login_bad_credentials_fails(post_request):
+    from learning_journal.views.default import login
+    data = {
+        'username': 'turbo',
+        'password': 'jarbo'
+    }
+    post_request.POST = data
+    response = login(post_request)
+    assert response == {'error': 'Bad username or password.'}
+
+
+def test_get_login_returns_dict(dummy_request):
+    from learning_journal.views.default import login
+    dummy_request.method = 'GET'
+    response = login(dummy_request)
+    assert response == {}
+
+
+def test_login_successful_with_good_creds(post_request, set_credentials):
+    from learning_journal.views.default import login
+    from pyramid.httpexceptions import HTTPFound
+    data = {
+        'username': 'turbo',
+        'password': 'maple'
+    }
+    post_request.POST = data
+    response = login(post_request)
     assert isinstance(response, HTTPFound)
 
 
@@ -153,3 +191,29 @@ def test_new_entry_redirects_and_shows_html(testapp):
     }
     response = testapp.post('/journal/new-entry', data).follow()
     assert "<h1>Testing 1-2-3</h1>" in response.text
+
+
+# ===== Recent tests June 8 =====
+
+
+# def test_unathenticated_user_is_forbidden_create_route(testapp):
+#     response = testapp.get('/journal/new-entry', status=403)
+#     assert response.status_code == 403
+
+
+# def test_unathenticated_user_is_forbidden_edit_route(testapp):
+#     response = testapp.get('/journal/1/edit-entry', status=403)
+#     assert response.status_code == 403
+
+
+# def test_can_get_login_route():
+#     response = testapp.get('/login')
+#     assert response.status_code == 200
+
+
+# def test_get_login_route_has_form_and_fields(testapp):
+#     response = testapp.get('/login')
+#     html = response.html
+#     assert html.find('form').attrs['method'] == 'POST'
+#     assert html.find('input', type='submit').attrs['value']== 'Login'
+#     assert html.find('input', )

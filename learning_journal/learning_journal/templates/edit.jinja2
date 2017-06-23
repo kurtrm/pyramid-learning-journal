@@ -8,16 +8,11 @@
                 <input type="text" name="title" value="{{ title }}" />
             </li>
             <li>
-                <label for="date">Date: </label>
-                <input type="text" name="date" value="{{ price }}" />
-            </li>
-            <li>
                 <label for="body">Body: </label>
-                <textarea name="body">
-                    {{ description }}
-                </textarea>
+                <textarea name="body">{{ body }}</textarea>
             </li>
             <li>
+             <input type="hidden" name="csrf_token" value="{{ request.session.get_csrf_token() }}" />
             <input type="submit" value="Update Entry" />
             </li>
         </ul>
